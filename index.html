@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Resource Hub</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <rect width="32" height="32" rx="8" fill="#0066cc"/>
+                    <path d="M12 10L20 16L12 22V10Z" fill="white"/>
+                </svg>
+                <span>Resource Hub</span>
+            </div>
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" title="Toggle theme">
+                    <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+                <button class="btn-primary" id="addResourceBtn" style="display: none;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add Resource</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1>Find Your Video <span class="highlight">Links</span></h1>
+            <p class="subtitle">Search, organize, and access your video links in one place</p>
+            
+            <div class="search-section">
+                <div class="search-container">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.35-4.35"></path>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Paste your video link here to find links...">
+                    <button class="search-submit" id="searchBtn">Search</button>
+                </div>
+
+                <div class="info-card">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                    </svg>
+                    <p>Paste a video link above to instantly find all links associated with that video. Each resource card contains related links you can unlock and access.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    
+
+    <main class="main-content">
+        <section class="section" id="quickLinksSection">
+            <div class="section-actions">
+                <div class="section-header">
+                    <h2>Quick Access Links</h2>
+                    <p>Frequently used resources and important links</p>
+                </div>
+                <button id="addQuickLinkBtn" class="add-btn" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Link
+                </button>
+            </div>
+            <div id="quickLinksContainer" class="quick-links-grid"></div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <h2>Available Resources</h2>
+                <p>Browse through our collection of video resources</p>
+            </div>
+            <div id="resourcesContainer" class="resources-grid"></div>
+        </section>
+    </main>
+
+    <div id="passwordModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Admin Access</h3>
+                <button class="modal-close" id="closePasswordModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Enter Password</label>
+                    <input type="password" id="passwordInput" placeholder="Enter admin password">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelPassword">Cancel</button>
+                <button class="btn-primary" id="passwordSubmit">Unlock</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addResourceModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Create New Resource</h3>
+                <button class="modal-close" id="closeAddResource">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Display Name <span class="required">*</span></label>
+                    <input type="text" id="outsideName" placeholder="Name shown to users on homepage">
+                    <span class="helper-text">This name will appear on the resource card</span>
+                </div>
+                <div class="form-group">
+                    <label>Video Link <span class="required">*</span></label>
+                    <input type="text" id="videoLinkInput" placeholder="Enter video URL">
+                </div>
+                <div class="form-group">
+                    <label>Resource Links <span class="required">*</span></label>
+                    <div id="titlesContainer">
+                        <div class="title-input-group">
+                            <input type="text" class="link-name-input" placeholder="Link Name (e.g., Download PDF)">
+                            <input type="text" class="link-url-input" placeholder="Link URL (https://...)">
+                        </div>
+                    </div>
+                    <button class="btn-secondary" id="addTitleBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Another Link
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelAdd">Cancel</button>
+                <button class="btn-primary" id="publishBtn">Publish Resource</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="resourceDetailModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="resourceDetailTitle">Resource Details</h3>
+                <button class="modal-close" id="closeResourceDetail">&times;</button>
+            </div>
+            <div class="modal-body" id="resourceContent"></div>
+        </div>
+    </div>
+
+    <div id="addQuickLinkModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Quick Link</h3>
+                <button class="modal-close" id="closeQuickLink">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Link Name <span class="required">*</span></label>
+                    <input type="text" id="quickLinkName" placeholder="e.g., My Channel">
+                </div>
+                <div class="form-group">
+                    <label>URL <span class="required">*</span></label>
+                    <input type="text" id="quickLinkUrl" placeholder="https://">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="quickLinkDesc" placeholder="Brief description of this link" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Button Text</label>
+                    <input type="text" id="quickLinkButtonText" placeholder="e.g., Open in new tab, Visit Now, etc.">
+                    <span class="helper-text">This text will appear on the action button</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelQuickLink">Cancel</button>
+                <button class="btn-primary" id="saveQuickLinkBtn">Save Link</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editResourceModal" class="modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>Edit Resource</h3>
+                <button class="modal-close" id="closeEditResource">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Display Name <span class="required">*</span></label>
+                    <input type="text" id="editOutsideName" placeholder="Name shown to users on homepage">
+                </div>
+                <div class="form-group">
+                    <label>Video Link <span class="required">*</span></label>
+                    <input type="text" id="editVideoLinkInput" placeholder="Enter video URL">
+                </div>
+                <div class="form-group">
+                    <label>Resource Links <span class="required">*</span></label>
+                    <div id="editTitlesContainer"></div>
+                    <button class="btn-secondary" id="editAddTitleBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Another Link
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelEdit">Cancel</button>
+                <button class="btn-primary" id="updateBtn">Update Resource</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="scrypt.js"></script>
+</body>
+</html>
