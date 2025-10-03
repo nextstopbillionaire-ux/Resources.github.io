@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 const PORT = 5000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "111111";
+const ADMIN_PASSWORD = "111111";
 
 if (process.env.NODE_ENV === 'production') {
     app.set('trust proxy', 1);
