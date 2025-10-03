@@ -1,49 +1,165 @@
-const password = "111111";
-
-let isAdmin = sessionStorage.getItem('isAdmin') === 'true';
-let resources = JSON.parse(localStorage.getItem('resources')) || [];
-let commonLinks = JSON.parse(localStorage.getItem('commonLinks')) || [];
+let isAdmin = false;
+let resources = [];
+let commonLinks = [];
 let titleCount = 1;
 let editTitleCount = 1;
 let currentEditId = null;
 
-function migrateResourceData() {
-    let needsSave = false;
-    resources = resources.map(resource => {
-        if (resource.titles && !resource.links) {
-            needsSave = true;
-            return {
-                ...resource,
-                links: resource.titles.map(title => ({
-                    name: title,
-                    url: resource.videoLink
-                })),
-                titles: undefined
-            };
-        }
-        return resource;
-    });
-    
-    if (needsSave) {
-        localStorage.setItem('resources', JSON.stringify(resources));
+const API_BASE = '';
+
+async function checkAuth() {
+    try {
+        const response = await fetch(`${API_BASE}/api/auth/check`, {
+            credentials: 'include'
+        });
+        const data = await response.json();
+        isAdmin = data.isAdmin;
+        updateAdminUI();
+    } catch (error) {
+        console.error('Error checking auth:', error);
     }
 }
 
-function migrateQuickLinksData() {
-    let needsSave = false;
-    commonLinks = commonLinks.map(link => {
-        if (!link.buttonText) {
-            needsSave = true;
-            return {
-                ...link,
-                buttonText: 'Open in new tab'
-            };
+async function login(password) {
+    try {
+        const response = await fetch(`${API_BASE}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ password })
+        });
+        const data = await response.json();
+        if (data.success) {
+            isAdmin = true;
+            return true;
         }
-        return link;
-    });
-    
-    if (needsSave) {
-        localStorage.setItem('commonLinks', JSON.stringify(commonLinks));
+        return false;
+    } catch (error) {
+        console.error('Error logging in:', error);
+        return false;
+    }
+}
+
+async function loadResources() {
+    try {
+        const response = await fetch(`${API_BASE}/api/resources`, {
+            credentials: 'include'
+        });
+        resources = await response.json();
+        displayResources();
+    } catch (error) {
+        console.error('Error loading resources:', error);
+        showNotification('Failed to load resources', 'error');
+    }
+}
+
+async function loadQuickLinks() {
+    try {
+        const response = await fetch(`${API_BASE}/api/quicklinks`, {
+            credentials: 'include'
+        });
+        commonLinks = await response.json();
+        displayCommonLinks();
+    } catch (error) {
+        console.error('Error loading quick links:', error);
+        showNotification('Failed to load quick links', 'error');
+    }
+}
+
+async function addResource(resource) {
+    try {
+        const response = await fetch(`${API_BASE}/api/resources`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(resource)
+        });
+        if (response.status === 401) {
+            showNotification('Unauthorized. Please log in as admin.', 'error');
+            throw new Error('Unauthorized');
+        }
+        const data = await response.json();
+        await loadResources();
+        return data;
+    } catch (error) {
+        console.error('Error adding resource:', error);
+        throw error;
+    }
+}
+
+async function updateResource(id, resource) {
+    try {
+        const response = await fetch(`${API_BASE}/api/resources/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(resource)
+        });
+        if (response.status === 401) {
+            showNotification('Unauthorized. Please log in as admin.', 'error');
+            throw new Error('Unauthorized');
+        }
+        const data = await response.json();
+        await loadResources();
+        return data;
+    } catch (error) {
+        console.error('Error updating resource:', error);
+        throw error;
+    }
+}
+
+async function removeResource(id) {
+    try {
+        const response = await fetch(`${API_BASE}/api/resources/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        if (response.status === 401) {
+            showNotification('Unauthorized. Please log in as admin.', 'error');
+            throw new Error('Unauthorized');
+        }
+        await loadResources();
+    } catch (error) {
+        console.error('Error deleting resource:', error);
+        throw error;
+    }
+}
+
+async function addQuickLink(link) {
+    try {
+        const response = await fetch(`${API_BASE}/api/quicklinks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(link)
+        });
+        if (response.status === 401) {
+            showNotification('Unauthorized. Please log in as admin.', 'error');
+            throw new Error('Unauthorized');
+        }
+        const data = await response.json();
+        await loadQuickLinks();
+        return data;
+    } catch (error) {
+        console.error('Error adding quick link:', error);
+        throw error;
+    }
+}
+
+async function removeQuickLink(id) {
+    try {
+        const response = await fetch(`${API_BASE}/api/quicklinks/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        if (response.status === 401) {
+            showNotification('Unauthorized. Please log in as admin.', 'error');
+            throw new Error('Unauthorized');
+        }
+        await loadQuickLinks();
+    } catch (error) {
+        console.error('Error deleting quick link:', error);
+        throw error;
     }
 }
 
@@ -142,10 +258,9 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-passwordSubmit.onclick = () => {
-    if (passwordInput.value === password) {
-        isAdmin = true;
-        sessionStorage.setItem('isAdmin', 'true');
+passwordSubmit.onclick = async () => {
+    const success = await login(passwordInput.value);
+    if (success) {
         closeModal(passwordModal);
         openModal(addResourceModal);
         updateAdminUI();
@@ -170,7 +285,7 @@ addTitleBtn.onclick = () => {
     titlesContainer.appendChild(titleGroup);
 };
 
-publishBtn.onclick = () => {
+publishBtn.onclick = async () => {
     const displayName = outsideName.value.trim();
     const videoLink = videoLinkInput.value.trim();
     const linkGroups = document.querySelectorAll('#titlesContainer .title-input-group');
@@ -209,22 +324,24 @@ publishBtn.onclick = () => {
         links
     };
 
-    resources.push(resource);
-    localStorage.setItem('resources', JSON.stringify(resources));
+    try {
+        await addResource(resource);
+        
+        outsideName.value = '';
+        videoLinkInput.value = '';
+        titlesContainer.innerHTML = `
+            <div class="title-input-group">
+                <input type="text" class="link-name-input" placeholder="Link Name (e.g., Download PDF)">
+                <input type="text" class="link-url-input" placeholder="Link URL (https://...)">
+            </div>
+        `;
+        titleCount = 1;
 
-    outsideName.value = '';
-    videoLinkInput.value = '';
-    titlesContainer.innerHTML = `
-        <div class="title-input-group">
-            <input type="text" class="link-name-input" placeholder="Link Name (e.g., Download PDF)">
-            <input type="text" class="link-url-input" placeholder="Link URL (https://...)">
-        </div>
-    `;
-    titleCount = 1;
-
-    closeModal(addResourceModal);
-    displayResources();
-    showNotification('Resource published successfully!', 'success');
+        closeModal(addResourceModal);
+        showNotification('Resource published successfully!', 'success');
+    } catch (error) {
+        showNotification('Failed to publish resource', 'error');
+    }
 };
 
 searchBtn.onclick = () => {
@@ -427,12 +544,14 @@ function editResource(id) {
     openModal(editResourceModal);
 }
 
-function deleteResource(id) {
+async function deleteResource(id) {
     if (confirm('Are you sure you want to delete this resource?')) {
-        resources = resources.filter(r => r.id !== id);
-        localStorage.setItem('resources', JSON.stringify(resources));
-        displayResources();
-        showNotification('Resource deleted successfully!', 'success');
+        try {
+            await removeResource(id);
+            showNotification('Resource deleted successfully!', 'success');
+        } catch (error) {
+            showNotification('Failed to delete resource', 'error');
+        }
     }
 }
 
@@ -447,7 +566,7 @@ editAddTitleBtn.onclick = () => {
     editTitlesContainer.appendChild(titleGroup);
 };
 
-updateBtn.onclick = () => {
+updateBtn.onclick = async () => {
     const displayName = editOutsideName.value.trim();
     const videoLink = editVideoLinkInput.value.trim();
     const linkGroups = document.querySelectorAll('#editTitlesContainer .title-input-group');
@@ -479,16 +598,20 @@ updateBtn.onclick = () => {
         return;
     }
 
-    const resourceIndex = resources.findIndex(r => r.id === currentEditId);
-    resources[resourceIndex].outsideName = displayName;
-    resources[resourceIndex].videoLink = videoLink;
-    resources[resourceIndex].links = links;
-    delete resources[resourceIndex].titles;
+    const resource = {
+        id: currentEditId,
+        outsideName: displayName,
+        videoLink: videoLink,
+        links: links
+    };
     
-    localStorage.setItem('resources', JSON.stringify(resources));
-    closeModal(editResourceModal);
-    displayResources();
-    showNotification('Resource updated successfully!', 'success');
+    try {
+        await updateResource(currentEditId, resource);
+        closeModal(editResourceModal);
+        showNotification('Resource updated successfully!', 'success');
+    } catch (error) {
+        showNotification('Failed to update resource', 'error');
+    }
 };
 
 function displayCommonLinks() {
@@ -560,7 +683,7 @@ addQuickLinkBtn.onclick = () => {
     openModal(addQuickLinkModal);
 };
 
-saveQuickLinkBtn.onclick = () => {
+saveQuickLinkBtn.onclick = async () => {
     const name = quickLinkName.value.trim();
     const url = quickLinkUrl.value.trim();
     const description = quickLinkDesc.value.trim();
@@ -571,30 +694,36 @@ saveQuickLinkBtn.onclick = () => {
         return;
     }
 
-    commonLinks.push({
+    const link = {
         id: Date.now(),
         name,
         url,
         description,
         buttonText
-    });
+    };
 
-    localStorage.setItem('commonLinks', JSON.stringify(commonLinks));
-    closeModal(addQuickLinkModal);
-    quickLinkName.value = '';
-    quickLinkUrl.value = '';
-    quickLinkDesc.value = '';
-    quickLinkButtonText.value = '';
-    displayCommonLinks();
-    showNotification('Quick link added successfully!', 'success');
+    try {
+        await addQuickLink(link);
+        
+        closeModal(addQuickLinkModal);
+        quickLinkName.value = '';
+        quickLinkUrl.value = '';
+        quickLinkDesc.value = '';
+        quickLinkButtonText.value = '';
+        showNotification('Quick link added successfully!', 'success');
+    } catch (error) {
+        showNotification('Failed to add quick link', 'error');
+    }
 };
 
-function deleteCommonLink(id) {
+async function deleteCommonLink(id) {
     if (confirm('Delete this quick link?')) {
-        commonLinks = commonLinks.filter(l => l.id !== id);
-        localStorage.setItem('commonLinks', JSON.stringify(commonLinks));
-        displayCommonLinks();
-        showNotification('Quick link deleted successfully!', 'success');
+        try {
+            await removeQuickLink(id);
+            showNotification('Quick link deleted successfully!', 'success');
+        } catch (error) {
+            showNotification('Failed to delete quick link', 'error');
+        }
     }
 }
 
@@ -610,35 +739,27 @@ function updateAdminUI() {
     displayCommonLinks();
 }
 
-function showNotification(message, type) {
-    const existingNotif = document.querySelector('.notification');
-    if (existingNotif) {
-        existingNotif.remove();
-    }
-
+function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
-    
-    const icon = type === 'success' 
-        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>'
-        : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
-    
     notification.innerHTML = `
-        <div class="notification-icon">${icon}</div>
-        <div class="notification-message">${message}</div>
+        ${type === 'success' 
+            ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+            : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>'
+        }
+        <span>${message}</span>
     `;
-
+    
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
-migrateResourceData();
-migrateQuickLinksData();
 initTheme();
-
-if (isAdmin) {
-    updateAdminUI();
-} else {
-    displayResources();
-    displayCommonLinks();
-}
+checkAuth();
+loadResources();
+loadQuickLinks();
